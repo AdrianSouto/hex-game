@@ -34,6 +34,7 @@ class HexBoard:
     def place_piece(self, row: int, col: int, player_id: int) -> bool:
         if self.board[row][col] == 0:
             self.board[row][col] = player_id
+            self.check_merge((row, col))
             return True
         return False
 
@@ -45,9 +46,12 @@ class HexBoard:
                     moves.append((i, j))
         return moves
 
-    def check_connection(self, player_id: int) -> bool:
-        """Verifica si el jugador ha conectado sus dos lados"""
-        pass
+    def check_connection(self, player_id: int, play: (int, int)) -> bool:
+        parent: Tuple[int, int] = self.set_of(play)
+        if self.side[parent[0]][parent[1]].issuperset({SideTable.UP, SideTable.DOWN}) and player_id == 1:
+            return True
+        if self.side[parent[0]][parent[1]].issuperset({SideTable.LEFT, SideTable.RIGHT}) and player_id == 2:
+            return True
 
     def merge(self, a: Tuple[int, int], b: Tuple[int, int]):
         a = self.set_of((a[0], a[1]))
@@ -67,3 +71,32 @@ class HexBoard:
             return x[0], x[1]
         else:
             return self.set_of(self.parents[x[0]][x[1]])
+
+    def check_merge(self, play: Tuple[int, int]):
+        # Arriba
+        if play[0] - 1 >= 0:
+            if self.board[play[0] - 1][play[1]] == self.board[play[0]][play[1]]:
+                self.merge(play, (play[0] - 1, play[1]))
+            # Arriba derecha
+            if play[1] + 1 < len(self.board[0]):
+                if self.board[play[0] - 1][play[1] + 1] == self.board[play[0]][play[1]]:
+                    self.merge(play, (play[0] - 1, play[1] + 1))
+
+        # Izquierda
+        if play[1] - 1 >= 0:
+            if self.board[play[0]][play[1] - 1] == self.board[play[0]][play[1]]:
+                self.merge(play, (play[0], play[1] - 1))
+
+        # Derecha
+        if play[1] + 1 < len(self.board[0]):
+            if self.board[play[0]][play[1] + 1] == self.board[play[0]][play[1]]:
+                self.merge(play, (play[0], play[1] + 1))
+
+        # Abajo
+        if play[0] + 1 < len(self.board):
+            if self.board[play[0] + 1][play[1]] == self.board[play[0]][play[1]]:
+                self.merge(play, (play[0] + 1, play[1]))
+            # Abajo izquierda
+            if play[1] - 1 >= 0:
+                if self.board[play[0] + 1][play[1] - 1] == self.board[play[0]][play[1]]:
+                    self.merge(play, (play[0] + 1, play[1] - 1))
