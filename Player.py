@@ -1,9 +1,10 @@
+from audioop import minmax
 from typing import Tuple
 import random
 from time import sleep
 
 from HexBoard import HexBoard
-from utils import player_symbol, PlayMode
+from utils import player_symbol, PlayMode, SideTable
 from Config import Config
 
 
@@ -16,7 +17,8 @@ class Player:
             if self.player_id == 1:
                 return self.human_play(self.player_id, board)
             else:
-                return self.random_play(board)
+                _, play = self.minimax(board, 2, True)
+                return play
 
         elif Config.PLAY_MODE == PlayMode.MULTI_PLAYER:
             return self.human_play(self.player_id, board)
@@ -42,3 +44,25 @@ class Player:
             return self.human_play(player, board)
         return play
 
+    def minimax(self, board: HexBoard, depth: int, maximizing_player: bool) -> tuple[int, None | int]:
+        actual_player = self.player_id
+        if self.player_id == 1:
+            actual_player = 1 if maximizing_player else 2
+        if self.player_id == 2:
+            actual_player = 2 if maximizing_player else 1
+
+        if depth == 0:
+            return board.evaluate(actual_player), None
+
+        posible_moves = board.get_possible_moves()
+        best_score = float('-inf') if maximizing_player else float('inf')
+        best_move = None
+        for move in posible_moves:
+            cloned = board.clone()
+            cloned.place_piece(move[0], move[1], actual_player)
+            score, _ = self.minimax(cloned, depth - 1, not maximizing_player)
+            if (maximizing_player and score > best_score) or ((not maximizing_player) and score < best_score):
+                best_score = score
+                best_move = move
+
+        return best_score, best_move

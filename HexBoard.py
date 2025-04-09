@@ -1,5 +1,4 @@
 from typing import Tuple, List, Set
-
 from utils import SideTable
 
 
@@ -25,11 +24,15 @@ class HexBoard:
         for i in range(len(self.board[0]) - 1):
             self.side[len(self.board) - 1][i].add(SideTable.DOWN)
 
-        def clone(self) -> HexBoard:
-            """Devuelve una copia del tablero."""
-            new_board = HexBoard(self.size)
-            new_board.board = [row[:] for row in self.board]
-            return new_board
+    def clone(self) -> 'HexBoard':
+        """Devuelve una copia del tablero."""
+        new_board = HexBoard(self.size)
+        new_board.board = [row[:] for row in self.board]
+        new_board.parents = [row[:] for row in self.parents]
+        new_board.sizes = [row[:] for row in self.sizes]
+        new_board.side = [row[:] for row in self.side]
+
+        return new_board
 
     def place_piece(self, row: int, col: int, player_id: int) -> bool:
         if self.board[row][col] == 0:
@@ -46,12 +49,20 @@ class HexBoard:
                     moves.append((i, j))
         return moves
 
-    def check_connection(self, player_id: int, play: (int, int)) -> bool:
-        parent: Tuple[int, int] = self.set_of(play)
-        if self.side[parent[0]][parent[1]].issuperset({SideTable.UP, SideTable.DOWN}) and player_id == 1:
-            return True
-        if self.side[parent[0]][parent[1]].issuperset({SideTable.LEFT, SideTable.RIGHT}) and player_id == 2:
-            return True
+    def check_connection(self, player_id: int) -> bool:
+        for i in range(0, self.size):
+            parent_up: Tuple[int, int] = self.set_of((0, i))
+            parent_down: Tuple[int, int] = self.set_of((self.size-1, i))
+            parent_right: Tuple[int, int] = self.set_of((self.size-1, i))
+            parent_left: Tuple[int, int] = self.set_of((i, 0))
+            if self.side[parent_up[0]][parent_up[1]].issuperset({SideTable.UP, SideTable.DOWN}) and player_id == 1:
+                return True
+            if self.side[parent_down[0]][parent_down[1]].issuperset({SideTable.UP, SideTable.DOWN}) and player_id == 1:
+                return True
+            if self.side[parent_right[0]][parent_right[1]].issuperset({SideTable.LEFT, SideTable.RIGHT}) and player_id == 2:
+                return True
+            if self.side[parent_left[0]][parent_left[1]].issuperset({SideTable.LEFT, SideTable.RIGHT}) and player_id == 2:
+                return True
 
     def merge(self, a: Tuple[int, int], b: Tuple[int, int]):
         a = self.set_of((a[0], a[1]))
@@ -100,3 +111,21 @@ class HexBoard:
             if play[1] - 1 >= 0:
                 if self.board[play[0] + 1][play[1] - 1] == self.board[play[0]][play[1]]:
                     self.merge(play, (play[0] + 1, play[1] - 1))
+
+
+    def evaluate(self, player_id: int) -> float:
+        score = 0
+        return self.h1(player_id)
+
+
+
+    def h1(self, player_id: int) -> float:
+        if self.check_connection(player_id):
+            return float('inf')
+        max_size = 0
+        for i in range(0, self.size):
+            for j in range(0, self.size):
+                if self.board[i][j] == player_id:
+                    max_size = max(max_size, self.sizes[i][j])
+
+        return max_size

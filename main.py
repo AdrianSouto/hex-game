@@ -6,7 +6,7 @@ from Player import Player
 from utils import numbers, player_symbol
 from Config import Config
 
-board_size = 6
+board_size = 3
 board = HexBoard(board_size)
 player1 = Player(1)
 player2 = Player(2)
@@ -40,23 +40,6 @@ def print_board(b: List[List[int]]):
 
 
 
-def h1(board: HexBoard, player: int) -> int:
-    return 1
-
-
-def minimax(play: (int, int), depth: int, board: HexBoard, player_id: int, isMyPlayer: bool) -> int:
-    if depth == 0 or board.check_connection(player_id, play):
-        return h1(board, player_id)
-
-    if isMyPlayer:
-        best_score = float('-inf')
-        possible_moves = board.get_possible_moves()
-        for move in possible_moves:
-            board.place_piece(move[0], move[1], player_id)
-            score = minimax(move, depth - 1, board, player_id, not isMyPlayer)
-            best_score = max(best_score, score)
-            board.board[move[0]][move[1]] = 0
-        return best_score
 
 if __name__ == '__main__':
     print_board(board.board)
@@ -68,7 +51,7 @@ if __name__ == '__main__':
         board.place_piece(play[0], play[1], actualPlayer.player_id)
         print_board(board.board)
 
-        if board.check_connection(actualPlayer.player_id, play):
+        if board.check_connection(actualPlayer.player_id):
             print(f"Jugador {actualPlayer.player_id} ({player_symbol[actualPlayer.player_id]}) gana!")
             break
         actualPlayer = player2 if actualPlayer.player_id == 1 else player1
