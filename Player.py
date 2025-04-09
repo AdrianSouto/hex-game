@@ -17,7 +17,7 @@ class Player:
             if self.player_id == 1:
                 return self.human_play(self.player_id, board)
             else:
-                _, play = self.minimax(board, 2, True)
+                _, play = self.minimax(board, 5, True, float('-inf'), float('inf'))
                 return play
 
         elif Config.PLAY_MODE == PlayMode.MULTI_PLAYER:
@@ -44,12 +44,18 @@ class Player:
             return self.human_play(player, board)
         return play
 
-    def minimax(self, board: HexBoard, depth: int, maximizing_player: bool) -> tuple[int, None | int]:
+    def minimax(self, board: HexBoard, depth: int, maximizing_player: bool, alpha: float, beta: float) -> tuple[int, None | int]:
         actual_player = self.player_id
         if self.player_id == 1:
             actual_player = 1 if maximizing_player else 2
         if self.player_id == 2:
             actual_player = 2 if maximizing_player else 1
+
+        if board.check_connection(1 if actual_player == 2 else 2):
+            return -20, None
+
+        if board.check_connection(actual_player):
+            return 20, None
 
         if depth == 0:
             return board.evaluate(actual_player), None
@@ -60,9 +66,18 @@ class Player:
         for move in posible_moves:
             cloned = board.clone()
             cloned.place_piece(move[0], move[1], actual_player)
-            score, _ = self.minimax(cloned, depth - 1, not maximizing_player)
+            score, _ = self.minimax(cloned, depth - 1, not maximizing_player, alpha, beta)
+            score -= depth
             if (maximizing_player and score > best_score) or ((not maximizing_player) and score < best_score):
                 best_score = score
                 best_move = move
+
+            if maximizing_player:
+                alpha = max(alpha, best_score)
+            else:
+                beta = min(beta, best_score)
+
+            if beta <= alpha:
+                break
 
         return best_score, best_move

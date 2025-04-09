@@ -7,22 +7,22 @@ class HexBoard:
         self.size = size  # Tamaño N del tablero (NxN)
         self.board = [[0 for _ in range(size)] for _ in range(size)]  # Matriz NxN (0=vacío, 1=Jugador1, 2=Jugador2)
 
-        self.parents: List[List[Tuple[int, int]]] = [[(i, j) for j in range(len(self.board[0]))] for i in range(len(self.board))]
-        self.sizes: List[List[int]] = [[1 for j in range(len(self.board[0]))] for i in range(len(self.board))]
+        self.parents: List[List[Tuple[int, int]]] = [[(i, j) for j in range(size)] for i in range(size)]
+        self.sizes: List[List[int]] = [[1 for j in range(size)] for i in range(size)]
         self.side: List[List[Set[int]]] = [[set() for _ in range(size)] for _ in range(size)]
 
 
-        for i in range(len(self.board[0]) - 1):
+        for i in range(size):
             self.side[0][i].add(SideTable.UP)
 
-        for i in range(len(self.board) - 1):
+        for i in range(size):
             self.side[i][0].add(SideTable.LEFT)
 
-        for i in range(len(self.board) - 1):
-            self.side[i][len(self.board[0]) - 1].add(SideTable.RIGHT)
+        for i in range(size):
+            self.side[i][size - 1].add(SideTable.RIGHT)
 
-        for i in range(len(self.board[0]) - 1):
-            self.side[len(self.board) - 1][i].add(SideTable.DOWN)
+        for i in range(size):
+            self.side[size - 1][i].add(SideTable.DOWN)
 
     def clone(self) -> 'HexBoard':
         """Devuelve una copia del tablero."""
@@ -55,13 +55,13 @@ class HexBoard:
             parent_down: Tuple[int, int] = self.set_of((self.size-1, i))
             parent_right: Tuple[int, int] = self.set_of((self.size-1, i))
             parent_left: Tuple[int, int] = self.set_of((i, 0))
-            if self.side[parent_up[0]][parent_up[1]].issuperset({SideTable.UP, SideTable.DOWN}) and player_id == 1:
+            if self.side[parent_up[0]][parent_up[1]].issuperset({SideTable.UP, SideTable.DOWN}) and self.board[parent_up[0]][parent_up[1]] == 1:
                 return True
-            if self.side[parent_down[0]][parent_down[1]].issuperset({SideTable.UP, SideTable.DOWN}) and player_id == 1:
+            if self.side[parent_down[0]][parent_down[1]].issuperset({SideTable.UP, SideTable.DOWN}) and self.board[parent_down[0]][parent_down[1]] == 1:
                 return True
-            if self.side[parent_right[0]][parent_right[1]].issuperset({SideTable.LEFT, SideTable.RIGHT}) and player_id == 2:
+            if self.side[parent_right[0]][parent_right[1]].issuperset({SideTable.LEFT, SideTable.RIGHT}) and self.board[parent_right[0]][parent_right[1]] == 2:
                 return True
-            if self.side[parent_left[0]][parent_left[1]].issuperset({SideTable.LEFT, SideTable.RIGHT}) and player_id == 2:
+            if self.side[parent_left[0]][parent_left[1]].issuperset({SideTable.LEFT, SideTable.RIGHT}) and self.board[parent_left[0]][parent_left[1]] == 2:
                 return True
 
     def merge(self, a: Tuple[int, int], b: Tuple[int, int]):
@@ -89,7 +89,7 @@ class HexBoard:
             if self.board[play[0] - 1][play[1]] == self.board[play[0]][play[1]]:
                 self.merge(play, (play[0] - 1, play[1]))
             # Arriba derecha
-            if play[1] + 1 < len(self.board[0]):
+            if play[1] + 1 < self.size:
                 if self.board[play[0] - 1][play[1] + 1] == self.board[play[0]][play[1]]:
                     self.merge(play, (play[0] - 1, play[1] + 1))
 
@@ -99,12 +99,12 @@ class HexBoard:
                 self.merge(play, (play[0], play[1] - 1))
 
         # Derecha
-        if play[1] + 1 < len(self.board[0]):
+        if play[1] + 1 < self.size:
             if self.board[play[0]][play[1] + 1] == self.board[play[0]][play[1]]:
                 self.merge(play, (play[0], play[1] + 1))
 
         # Abajo
-        if play[0] + 1 < len(self.board):
+        if play[0] + 1 < self.size:
             if self.board[play[0] + 1][play[1]] == self.board[play[0]][play[1]]:
                 self.merge(play, (play[0] + 1, play[1]))
             # Abajo izquierda
@@ -114,14 +114,11 @@ class HexBoard:
 
 
     def evaluate(self, player_id: int) -> float:
-        score = 0
         return self.h1(player_id)
 
 
 
     def h1(self, player_id: int) -> float:
-        if self.check_connection(player_id):
-            return float('inf')
         max_size = 0
         for i in range(0, self.size):
             for j in range(0, self.size):
