@@ -32,7 +32,7 @@ def print_board(b: List[List[int]]):
                 print(" ", end="")
             else:
                 print("⚪" if b[r][c - margin] == 0
-                      else "🔵" if b[r][c - margin] == 1
+                      else "🔵" if b[r][c - margin] == 2
                       else "🔴", end="")
 
         margin += 1

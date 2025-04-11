@@ -1,4 +1,5 @@
 from typing import Tuple, List, Set
+
 from utils import SideTable
 
 
@@ -10,6 +11,7 @@ class HexBoard:
         self.parents: List[List[Tuple[int, int]]] = [[(i, j) for j in range(size)] for i in range(size)]
         self.sizes: List[List[int]] = [[1 for j in range(size)] for i in range(size)]
         self.side: List[List[Set[int]]] = [[set() for _ in range(size)] for _ in range(size)]
+        self.most_border = []
 
 
         for i in range(size):
@@ -55,13 +57,13 @@ class HexBoard:
             parent_down: Tuple[int, int] = self.set_of((self.size-1, i))
             parent_right: Tuple[int, int] = self.set_of((self.size-1, i))
             parent_left: Tuple[int, int] = self.set_of((i, 0))
-            if self.side[parent_up[0]][parent_up[1]].issuperset({SideTable.UP, SideTable.DOWN}) and self.board[parent_up[0]][parent_up[1]] == 1:
+            if self.side[parent_up[0]][parent_up[1]].issuperset({SideTable.UP, SideTable.DOWN}) and self.board[parent_up[0]][parent_up[1]] == 2 == player_id:
                 return True
-            if self.side[parent_down[0]][parent_down[1]].issuperset({SideTable.UP, SideTable.DOWN}) and self.board[parent_down[0]][parent_down[1]] == 1:
+            if self.side[parent_down[0]][parent_down[1]].issuperset({SideTable.UP, SideTable.DOWN}) and self.board[parent_down[0]][parent_down[1]] == 2 == player_id:
                 return True
-            if self.side[parent_right[0]][parent_right[1]].issuperset({SideTable.LEFT, SideTable.RIGHT}) and self.board[parent_right[0]][parent_right[1]] == 2:
+            if self.side[parent_right[0]][parent_right[1]].issuperset({SideTable.LEFT, SideTable.RIGHT}) and self.board[parent_right[0]][parent_right[1]] == 1 == player_id:
                 return True
-            if self.side[parent_left[0]][parent_left[1]].issuperset({SideTable.LEFT, SideTable.RIGHT}) and self.board[parent_left[0]][parent_left[1]] == 2:
+            if self.side[parent_left[0]][parent_left[1]].issuperset({SideTable.LEFT, SideTable.RIGHT}) and self.board[parent_left[0]][parent_left[1]] == 1 == player_id:
                 return True
 
     def merge(self, a: Tuple[int, int], b: Tuple[int, int]):
@@ -82,6 +84,45 @@ class HexBoard:
             return x[0], x[1]
         else:
             return self.set_of(self.parents[x[0]][x[1]])
+
+    def check_merge_count(self, play: Tuple[int, int]):
+        count = 0
+        side = {}
+        # Arriba
+        if play[0] - 1 >= 0:
+            if self.board[play[0] - 1][play[1]] == self.board[play[0]][play[1]]:
+                parent = self.set_of((play[0] - 1, play[1]))
+
+                count += self.sizes[parent[0]][parent[1]]
+            # Arriba derecha
+            if play[1] + 1 < self.size:
+                if self.board[play[0] - 1][play[1] + 1] == self.board[play[0]][play[1]]:
+                    parent = self.set_of((play[0] - 1, play[1] + 1))
+                    count += self.sizes[parent[0]][parent[1]]
+        # Izquierda
+        if play[1] - 1 >= 0:
+            if self.board[play[0]][play[1] - 1] == self.board[play[0]][play[1]]:
+                parent = self.set_of((play[0], play[1] - 1))
+                count += self.sizes[parent[0]][parent[1]]
+
+        # Derecha
+        if play[1] + 1 < self.size:
+            if self.board[play[0]][play[1] + 1] == self.board[play[0]][play[1]]:
+                parent = self.set_of((play[0], play[1] + 1))
+                count += self.sizes[parent[0]][parent[1]]
+
+        # Abajo
+        if play[0] + 1 < self.size:
+            if self.board[play[0] + 1][play[1]] == self.board[play[0]][play[1]]:
+                parent = self.set_of((play[0] + 1, play[1]))
+                count += self.sizes[parent[0]][parent[1]]
+            # Abajo izquierda
+            if play[1] - 1 >= 0:
+                if self.board[play[0] + 1][play[1] - 1] == self.board[play[0]][play[1]]:
+                    parent = self.set_of((play[0] + 1, play[1] - 1))
+                    count += self.sizes[parent[0]][parent[1]]
+
+        return count
 
     def check_merge(self, play: Tuple[int, int]):
         # Arriba
@@ -113,16 +154,33 @@ class HexBoard:
                     self.merge(play, (play[0] + 1, play[1] - 1))
 
 
+    def is_valid(self, pos: (int, int)) -> bool:
+        return self.size > pos[0] >= 0 and self.size > pos[1] >= 0
+
     def evaluate(self, player_id: int) -> float:
-        return self.h1(player_id)
+        score = 0
+        for i in range(self.size):
+            for j in range(self.size):
+                #Puentes
+                #Arriba derecha
+                if self.is_valid((i - 1, j + 2)) and self.board[i][j] == self.board[i-1][j + 2]:
+                    score+=3
+                #Arriba izquierda
+                if self.is_valid((i - 1, j - 1)) and self.board[i][j] == self.board[i - 1][j - 1]:
+                    score += 3
+                #Abajo izquierda
+                if self.is_valid((i + 1, j - 2)) and self.board[i][j] == self.board[i + 1][j - 2]:
+                    score += 3
+                #Abajo derecha
+                if self.is_valid((i + 1, j + 1)) and self.board[i][j] == self.board[i + 1][j + 1]:
+                    score += 3
 
 
 
-    def h1(self, player_id: int) -> float:
-        max_size = 0
-        for i in range(0, self.size):
-            for j in range(0, self.size):
-                if self.board[i][j] == player_id:
-                    max_size = max(max_size, self.sizes[i][j])
 
-        return max_size
+                score += self.check_merge_count((i, j)) + 1
+        return score
+
+    def evaluate2(self, player_id: int) -> float:
+        return 1
+
