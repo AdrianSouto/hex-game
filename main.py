@@ -3,14 +3,12 @@ from typing import List, Tuple, Set
 
 from HexBoard import HexBoard
 from Player import Player
-from utils import numbers, player_symbol
+from utils import numbers, player_symbol, PlayMode
 from Config import Config
 
 board_size = 6
 board = HexBoard(board_size)
-player1 = Player(1)
-player2 = Player(2)
-actualPlayer = player1
+
 
 
 def print_board(b: List[List[int]]):
@@ -40,11 +38,25 @@ def print_board(b: List[List[int]]):
 
 
 
-
 if __name__ == '__main__':
+    player1 = Player(1)
+    player2 = Player(2)
     print_board(board.board)
     print("Player 1 gana de arriba a abajo")
     Config.PLAY_MODE = int(input("Que modo de juego desea? (1: Un jugador, 2: Dos jugadores, 3: IA vs IA): "))
+    if Config.PLAY_MODE == PlayMode.SINGLE_PLAYER:
+        player1 = Player(1, False)
+        player2 = Player(2, True)
+
+    elif Config.PLAY_MODE == PlayMode.MULTI_PLAYER:
+        player1 = Player(1, False)
+        player2 = Player(2, False)
+    elif Config.PLAY_MODE == PlayMode.NO_PLAYER:
+        player1 = Player(1, True)
+        player2 = Player(2, True)
+
+    actualPlayer = player1
+
     while True:
         print()
         play = actualPlayer.play(board)
