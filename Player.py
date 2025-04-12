@@ -27,7 +27,7 @@ class PlayerAdrIAn(Player):
         possible_moves = board.get_possible_moves()
         posible_moves = board.get_possible_moves()
         if depth == MAX_DEPTH:
-            depth = max(MAX_DEPTH - round((MAX_DEPTH * (len(posible_moves) / board.size ** 2))) + 1, 2)
+            depth = max(MAX_DEPTH - round((MAX_DEPTH * (len(posible_moves) / board.size ** 2))) + 1, 3)
 
         if board.check_connection(self.player_id):
             return 1000 - depth, None
