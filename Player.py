@@ -4,9 +4,15 @@ from typing import Tuple, Optional, List
 MAX_DEPTH = 3
 
 class Player:
-    def __init__(self, player_id: int, is_ai: bool = True):
+    def __init__(self, player_id: int):
         self.player_id = player_id  # Tu identificador (1 o 2)
-        self.is_ai = is_ai
+
+    def play(self, board: HexBoard) -> tuple:
+        raise NotImplementedError("¡Implementa este método!")
+
+class PlayerAdrIAn(Player):
+    def __init__(self, player_id: int):
+        super().__init__(player_id)  # Call the parent class constructor
 
     def play(self, board: HexBoard) -> tuple:
         _, play = self.minimax(board, MAX_DEPTH, True, float('-inf'), float('inf'), evaluate4)
