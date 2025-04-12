@@ -2,8 +2,7 @@ from typing import Tuple, Optional
 import random
 
 from HexBoard import HexBoard
-from utils import player_symbol, PlayMode, SideTable, measure_time
-from Config import Config
+from utils import player_symbol, measure_time
 
 
 MAX_DEPTH = 3
@@ -17,7 +16,7 @@ class Player:
     def play(self, board: HexBoard) -> tuple:
         if self.is_ai:
             if self.player_id == 1:
-                _, play = self.minimax(board, MAX_DEPTH, True, float('-inf'), float('inf'), board.evaluate4)
+                _, play = self.minimax(board, MAX_DEPTH, True, float('-inf'), float('inf'), board.evaluate)
                 print(f"IA ({player_symbol[self.player_id]}) juega en {play[0] + 1},{play[1] + 1}")
                 return play
             else:
