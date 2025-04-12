@@ -17,13 +17,12 @@ class Player:
     def play(self, board: HexBoard) -> tuple:
         if self.is_ai:
             if self.player_id == 1:
-                if len(board.get_possible_moves()) >= board.size ** 2 -1:
-                    return int((board.size - 1) / 2), int((board.size - 1) / 2)
-                _, play = self.minimax(board, MAX_DEPTH, True, float('-inf'), float('inf'), board.evaluate)
+                _, play = self.minimax(board, MAX_DEPTH, True, float('-inf'), float('inf'), board.evaluate4)
                 print(f"IA ({player_symbol[self.player_id]}) juega en {play[0] + 1},{play[1] + 1}")
                 return play
             else:
-                _, play = self.minimax(board, MAX_DEPTH, True, float('-inf'), float('inf'), board.evaluate2)
+
+                _, play = self.minimax(board, MAX_DEPTH, True, float('-inf'), float('inf'), board.evaluate4)
                 print(f"IA ({player_symbol[self.player_id]}) juega en {play[0] + 1},{play[1] + 1}")
                 return play
         else:
