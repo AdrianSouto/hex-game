@@ -1,45 +1,23 @@
-from typing import Tuple, List, Set
+from collections import deque
+from typing import Tuple, List
 
-from utils import SideTable
 
 
 class HexBoard:
     def __init__(self, size: int):
         self.size = size  # Tamaño N del tablero (NxN)
-        self.board = [[0 for _ in range(size)] for _ in range(size)]  # Matriz NxN (0=vacío, 1=Jugador1, 2=Jugador2)
-
-        self.parents: List[List[Tuple[int, int]]] = [[(i, j) for j in range(size)] for i in range(size)]
-        self.sizes: List[List[int]] = [[1 for j in range(size)] for i in range(size)]
-        self.side: List[List[Set[int]]] = [[set() for _ in range(size)] for _ in range(size)]
-        self.most_border = []
-
-
-        for i in range(size):
-            self.side[0][i].add(SideTable.UP)
-
-        for i in range(size):
-            self.side[i][0].add(SideTable.LEFT)
-
-        for i in range(size):
-            self.side[i][size - 1].add(SideTable.RIGHT)
-
-        for i in range(size):
-            self.side[size - 1][i].add(SideTable.DOWN)
+        self.board = [[0 for _ in range(size)] for _ in range(size)]
 
     def clone(self) -> 'HexBoard':
         """Devuelve una copia del tablero."""
         new_board = HexBoard(self.size)
         new_board.board = [row[:] for row in self.board]
-        new_board.parents = [row[:] for row in self.parents]
-        new_board.sizes = [row[:] for row in self.sizes]
-        new_board.side = [row[:] for row in self.side]
 
         return new_board
 
     def place_piece(self, row: int, col: int, player_id: int) -> bool:
         if self.board[row][col] == 0:
             self.board[row][col] = player_id
-            self.check_merge((row, col))
             return True
         return False
 
@@ -52,135 +30,182 @@ class HexBoard:
         return moves
 
     def check_connection(self, player_id: int) -> bool:
-        for i in range(0, self.size):
-            parent_up: Tuple[int, int] = self.set_of((0, i))
-            parent_down: Tuple[int, int] = self.set_of((self.size-1, i))
-            parent_right: Tuple[int, int] = self.set_of((self.size-1, i))
-            parent_left: Tuple[int, int] = self.set_of((i, 0))
-            if self.side[parent_up[0]][parent_up[1]].issuperset({SideTable.UP, SideTable.DOWN}) and self.board[parent_up[0]][parent_up[1]] == 2 == player_id:
-                return True
-            if self.side[parent_down[0]][parent_down[1]].issuperset({SideTable.UP, SideTable.DOWN}) and self.board[parent_down[0]][parent_down[1]] == 2 == player_id:
-                return True
-            if self.side[parent_right[0]][parent_right[1]].issuperset({SideTable.LEFT, SideTable.RIGHT}) and self.board[parent_right[0]][parent_right[1]] == 1 == player_id:
-                return True
-            if self.side[parent_left[0]][parent_left[1]].issuperset({SideTable.LEFT, SideTable.RIGHT}) and self.board[parent_left[0]][parent_left[1]] == 1 == player_id:
-                return True
+        def on_visit(x, y):
+            nonlocal left, right, up, down
+            if x == 0:
+                up = True
+            if x == self.size - 1:
+                down = True
+            if y == 0:
+                left = True
+            if y == self.size - 1:
+                right = True
 
-    def merge(self, a: Tuple[int, int], b: Tuple[int, int]):
-        a = self.set_of((a[0], a[1]))
-        b = self.set_of((b[0], b[1]))
+        for i in range(self.size):
+            left = False
+            right = False
+            up = False
+            down = False
 
-        if self.sizes[a[0]][a[1]] < self.sizes[b[0]][b[1]]:
-            self.parents[a[0]][a[1]] = (b[0], b[1])
-            self.sizes[b[0]][b[1]] += self.sizes[a[0]][a[1]]
-        else:
-            self.parents[b[0]][b[1]] = (a[0], a[1])
-            self.sizes[a[0]][a[1]] += self.sizes[b[0]][b[1]]
-
-        self.side[b[0]][b[1]] = self.side[a[0]][a[1]] = self.side[a[0]][a[1]].union(self.side[b[0]][b[1]])
-
-    def set_of(self, x: Tuple[int, int]) -> Tuple[int, int]:
-        if self.parents[x[0]][x[1]] == x:
-            return x[0], x[1]
-        else:
-            return self.set_of(self.parents[x[0]][x[1]])
-
-    def check_merge_count(self, play: Tuple[int, int]):
-        count = 0
-        side = {}
-        # Arriba
-        if play[0] - 1 >= 0:
-            if self.board[play[0] - 1][play[1]] == self.board[play[0]][play[1]]:
-                parent = self.set_of((play[0] - 1, play[1]))
-
-                count += self.sizes[parent[0]][parent[1]]
-            # Arriba derecha
-            if play[1] + 1 < self.size:
-                if self.board[play[0] - 1][play[1] + 1] == self.board[play[0]][play[1]]:
-                    parent = self.set_of((play[0] - 1, play[1] + 1))
-                    count += self.sizes[parent[0]][parent[1]]
-        # Izquierda
-        if play[1] - 1 >= 0:
-            if self.board[play[0]][play[1] - 1] == self.board[play[0]][play[1]]:
-                parent = self.set_of((play[0], play[1] - 1))
-                count += self.sizes[parent[0]][parent[1]]
-
-        # Derecha
-        if play[1] + 1 < self.size:
-            if self.board[play[0]][play[1] + 1] == self.board[play[0]][play[1]]:
-                parent = self.set_of((play[0], play[1] + 1))
-                count += self.sizes[parent[0]][parent[1]]
-
-        # Abajo
-        if play[0] + 1 < self.size:
-            if self.board[play[0] + 1][play[1]] == self.board[play[0]][play[1]]:
-                parent = self.set_of((play[0] + 1, play[1]))
-                count += self.sizes[parent[0]][parent[1]]
-            # Abajo izquierda
-            if play[1] - 1 >= 0:
-                if self.board[play[0] + 1][play[1] - 1] == self.board[play[0]][play[1]]:
-                    parent = self.set_of((play[0] + 1, play[1] - 1))
-                    count += self.sizes[parent[0]][parent[1]]
-
-        return count
-
-    def check_merge(self, play: Tuple[int, int]):
-        # Arriba
-        if play[0] - 1 >= 0:
-            if self.board[play[0] - 1][play[1]] == self.board[play[0]][play[1]]:
-                self.merge(play, (play[0] - 1, play[1]))
-            # Arriba derecha
-            if play[1] + 1 < self.size:
-                if self.board[play[0] - 1][play[1] + 1] == self.board[play[0]][play[1]]:
-                    self.merge(play, (play[0] - 1, play[1] + 1))
-
-        # Izquierda
-        if play[1] - 1 >= 0:
-            if self.board[play[0]][play[1] - 1] == self.board[play[0]][play[1]]:
-                self.merge(play, (play[0], play[1] - 1))
-
-        # Derecha
-        if play[1] + 1 < self.size:
-            if self.board[play[0]][play[1] + 1] == self.board[play[0]][play[1]]:
-                self.merge(play, (play[0], play[1] + 1))
-
-        # Abajo
-        if play[0] + 1 < self.size:
-            if self.board[play[0] + 1][play[1]] == self.board[play[0]][play[1]]:
-                self.merge(play, (play[0] + 1, play[1]))
-            # Abajo izquierda
-            if play[1] - 1 >= 0:
-                if self.board[play[0] + 1][play[1] - 1] == self.board[play[0]][play[1]]:
-                    self.merge(play, (play[0] + 1, play[1] - 1))
+            #checkear izquierda derecha
+            if player_id == 1:
+                if self.board[i][0] == 1:
+                    self.bfs_same_player((i, 0), player_id, on_visit)
+                    if left and right:
+                        return True
+            else:
+                if self.board[0][i] == 2:
+                    self.bfs_same_player((0, i), player_id, on_visit)
+                    if up and down:
+                        return True
 
 
     def is_valid(self, pos: (int, int)) -> bool:
         return self.size > pos[0] >= 0 and self.size > pos[1] >= 0
 
+
     def evaluate(self, player_id: int) -> float:
-        score = 0
+        score = 100
+        free_left = (0, 0)
+        free_up = (0, 0)
+        free_right = (0, self.size - 1)
+        free_down = (self.size - 1, 0)
+
+        for i in range(self.size):
+            if self.board[i][0] == 0:
+                free_left = (i, 0)
+                break
+
+        for i in range(self.size):
+            if self.board[0][i] == 0:
+                free_up = (0, i)
+                break
+
+        for i in range(self.size):
+            if self.board[self.size - 1][i] == 0:
+                free_down = (self.size - 1, i)
+                break
+
+        for i in range(self.size):
+            if self.board[i][self.size - 1] == 0:
+                free_right = (i, self.size - 1)
+                break
+
         for i in range(self.size):
             for j in range(self.size):
-                #Puentes
-                #Arriba derecha
-                if self.is_valid((i - 1, j + 2)) and self.board[i][j] == self.board[i-1][j + 2]:
-                    score+=3
-                #Arriba izquierda
-                if self.is_valid((i - 1, j - 1)) and self.board[i][j] == self.board[i - 1][j - 1]:
-                    score += 3
-                #Abajo izquierda
-                if self.is_valid((i + 1, j - 2)) and self.board[i][j] == self.board[i + 1][j - 2]:
-                    score += 3
-                #Abajo derecha
-                if self.is_valid((i + 1, j + 1)) and self.board[i][j] == self.board[i + 1][j + 1]:
-                    score += 3
+                if self.board[i][j] == player_id:
+                    if player_id == 1:
+                        right_distance = ((i - free_right[0]) ** 2 + (j - free_right[1]) ** 2) ** 0.5
+                        left_distance = ((i - free_left[0]) ** 2 + (j - free_left[1]) ** 2) ** 0.5
+                        score -= right_distance + left_distance
+                    else:
+                        up_distance = ((i - free_up[0]) ** 2 + (j - free_up[1]) ** 2) ** 0.5
+                        down_distance = ((i - free_down[0]) ** 2 + (j - free_down[1]) ** 2) ** 0.5
+                        score -= up_distance + down_distance
+                        # Puentes
+                        # Arriba derecha
+                    if player_id == 1 and self.is_valid((i - 1, j + 2)) and self.board[i][j] == self.board[i - 1][j + 2]:
+                        score += 3
+                    # Abajo izquierda
+                    if  player_id == 2 and self.is_valid((i + 1, j - 2)) and self.board[i][j] == self.board[i + 1][j - 2]:
+                        score += 3
+                    # Abajo derecha
+                    if self.is_valid((i + 1, j + 1)) and self.board[i][j] == self.board[i + 1][j + 1]:
+                        score += 3
 
+        if self.check_connection(player_id):
+            score = 1000
 
-
-
-                score += self.check_merge_count((i, j)) + 1
         return score
+
 
     def evaluate2(self, player_id: int) -> float:
         return 1
 
+
+    def bridges(self):
+        score = 0
+        for i in range(self.size):
+            for j in range(self.size):
+                # Puentes
+                # Arriba derecha
+                if self.is_valid((i - 1, j + 2)) and self.board[i][j] == self.board[i - 1][j + 2]:
+                    score += 3
+                # Arriba izquierda
+                if self.is_valid((i - 1, j - 1)) and self.board[i][j] == self.board[i - 1][j - 1]:
+                    score += 3
+                # Abajo izquierda
+                if self.is_valid((i + 1, j - 2)) and self.board[i][j] == self.board[i + 1][j - 2]:
+                    score += 3
+                # Abajo derecha
+                if self.is_valid((i + 1, j + 1)) and self.board[i][j] == self.board[i + 1][j + 1]:
+                    score += 3
+
+                score += self.check_merge_count((i, j)) + 1
+        return score
+
+    def bfs_same_player(self, start: Tuple[int, int], player_id: int, on_visit) -> List[Tuple[int, int]]:
+        rows, cols = len(self.board), len(self.board[0])
+        visited = set()
+        queue = deque([start])
+        result = []
+
+        directions = [(-1, 0), (1, 0), (0, -1), (0, 1), (-1, 1), (1, -1)]  # Movimientos válidos en un tablero hexagonal
+
+        while queue:
+            x, y = queue.popleft()
+
+            if (x, y) in visited:
+                continue
+
+            on_visit(x, y)
+
+            visited.add((x, y))
+            result.append((x, y))
+
+            for dx, dy in directions:
+                nx, ny = x + dx, y + dy
+                if 0 <= nx < rows and 0 <= ny < cols and (nx, ny) not in visited and self.board[nx][ny] == player_id:
+                    queue.append((nx, ny))
+
+        return result
+
+
+    def dfs_forest_extremes(self, board: List[List[int]], player_id: int) -> Tuple[
+        List[Tuple[int, int]], List[Tuple[int, int]], List[Tuple[int, int]], List[Tuple[int, int]]]:
+        rows, cols = len(board), len(board[0])
+        visited = set()
+        directions = [(-1, 0), (1, 0), (0, -1), (0, 1), (-1, 1), (1, -1)]  # Movimientos válidos en un tablero hexagonal
+
+        # Arrays para almacenar los extremos de cada bosque
+        rightmost = []
+        leftmost = []
+        topmost = []
+        bottommost = []
+
+        def dfs(x: int, y: int, forest: List[Tuple[int, int]]):
+            stack = [(x, y)]
+            while stack:
+                cx, cy = stack.pop()
+                if (cx, cy) in visited:
+                    continue
+                visited.add((cx, cy))
+                forest.append((cx, cy))
+                for dx, dy in directions:
+                    nx, ny = cx + dx, cy + dy
+                    if 0 <= nx < rows and 0 <= ny < cols and (nx, ny) not in visited and board[nx][ny] == player_id:
+                        stack.append((nx, ny))
+
+        for i in range(rows):
+            for j in range(cols):
+                if board[i][j] == player_id and (i, j) not in visited:
+                    forest = []
+                    dfs(i, j, forest)
+
+                    # Calcular los extremos del bosque actual
+                    rightmost.append(max(forest, key=lambda pos: pos[1]))
+                    leftmost.append(min(forest, key=lambda pos: pos[1]))
+                    topmost.append(min(forest, key=lambda pos: pos[0]))
+                    bottommost.append(max(forest, key=lambda pos: pos[0]))
+
+        return rightmost, leftmost, topmost, bottommost

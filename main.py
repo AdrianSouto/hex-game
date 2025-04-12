@@ -6,7 +6,7 @@ from Player import Player
 from utils import numbers, player_symbol, PlayMode
 from Config import Config
 
-board_size = 6
+board_size = 11
 board = HexBoard(board_size)
 
 
