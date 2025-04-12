@@ -34,7 +34,7 @@ class PlayerAdrIAn(Player):
         if board.check_connection(3 - self.player_id):
             return -1000 + depth, None
         if depth == 0 or not possible_moves:
-            return heuristic(self.player_id), None
+            return heuristic(board, self.player_id), None
 
         best_score = float('-inf') if maximizing_player else float('inf')
         best_move = None
@@ -72,101 +72,110 @@ def is_valid(board: HexBoard, pos: (int, int)) -> bool:
 
 
 def evaluate4(board, player_id: int) -> float:
-    score = 100
-    free_left = (0, 0)
-    free_up = (0, 0)
-    free_right = (0, board.size - 1)
-    free_down = (board.size - 1, 0)
-    rightmost_dict, leftmost_dict, topmost_dict, bottommost_dict = board.dfs_forest_extremes(board.board, player_id)
+        score = 100
 
-    for i in range(board.size):
-        if board.board[i][0] == player_id:
-            free_left = rightmost_dict[(i, 0)]
-            break
-        if board.board[i][0] == 0:
-            free_left = (i, 0)
-            break
+        rightmost_dict, leftmost_dict, topmost_dict, bottommost_dict = board.dfs_forest_extremes(board.board, player_id)
 
-    for i in range(board.size):
-        if board.board[0][i] == player_id:
-            free_up = bottommost_dict[(0, i)]
-            break
-        if board.board[0][i] == 0:
-            free_up = (0, i)
-            break
+        middle = board.size // 2
+        free_left = min(
+            [pos for pos in rightmost_dict.values() if pos[1] == 0],
+            key=lambda pos: (pos[0], abs(pos[1] - middle)),
+            default=(0, 0)
+        )
+        free_up = min(
+            [pos for pos in bottommost_dict.values() if pos[0] == 0],
+            key=lambda pos: (pos[1], abs(pos[0] - middle)),
+            default=(0, 0)
+        )
+        free_right = min(
+            [pos for pos in leftmost_dict.values() if pos[1] == board.size - 1],
+            key=lambda pos: (pos[0], abs(pos[1] - middle)),
+            default=(0, board.size - 1)
+        )
+        free_down = min(
+            [pos for pos in topmost_dict.values() if pos[0] == board.size - 1],
+            key=lambda pos: (pos[1], abs(pos[0] - middle)),
+            default=(board.size - 1, 0)
+        )
 
-    for i in range(board.size):
-        if board.board[board.size - 1][i] == player_id:
-            free_down = topmost_dict[board.size - 1, i]
-            break
-        if board.board[board.size - 1][i] == 0:
-            free_down = (board.size - 1, i)
-            break
+        directions = [(-1, 0), (1, 0), (0, -1), (0, 1), (-1, 1), (1, -1)]  # Hexagonal directions
 
-    for i in range(board.size):
-        if board.board[i][board.size - 1] == player_id:
-            free_right = leftmost_dict[i, board.size - 1]
-            break
-        if board.board[i][board.size - 1] == 0:
-            free_right = (i, board.size - 1)
-            break
+        for i in range(board.size):
+            for j in range(board.size):
+                count = 0
+                for dx, dy in directions:
+                    nx, ny = i + dx, j + dy
+                    if board.is_valid((nx, ny)) and board.board[nx][ny] == player_id:
+                        count += 1
 
-    for i in range(board.size):
-        for j in range(board.size):
-            if board.board[i][j] == player_id:
-                if player_id == 1:
-                    right_distance = ((i - free_right[0]) ** 2 + (j - free_right[1]) ** 2) ** 0.5
-                    left_distance = ((i - free_left[0]) ** 2 + (j - free_left[1]) ** 2) ** 0.5
-                    score -= right_distance + left_distance
-                else:
-                    up_distance = ((i - free_up[0]) ** 2 + (j - free_up[1]) ** 2) ** 0.5
-                    down_distance = ((i - free_down[0]) ** 2 + (j - free_down[1]) ** 2) ** 0.5
-                    score -= up_distance + down_distance
-                    # Puentes
-                    # Arriba derecha
-                if player_id == 1 and board.is_valid((i - 1, j + 2)) and board.board[i][j] == board.board[i - 1][
-                    j + 2]:
-                    score += 3
+                if count > 3:
+                    score -= 5 * count
 
-                # Abajo izquierda
-                if player_id == 2 and board.is_valid((i + 1, j - 2)) and board.board[i][j] == board.board[i + 1][
-                    j - 2]:
-                    score += 3
-                # Abajo derecha
-                if board.is_valid((i + 1, j + 1)) and board.board[i][j] == board.board[i + 1][j + 1]:
-                    score += 3
-
-                #Verificar cierres de puente
-                # Arriba derecha, player abajo
-                if (board.is_valid((i - 1, j + 1)) and board.board[i][j] == board.board[i - 1][j + 1]
-                        and board.is_valid((i, j - 1)) and board.board[i][j] == board.board[i][j - 1]
-                    and board.is_valid((i - 1, j)) and board.board[i][j] != board.board[i - 1][j]):
+                if board.board[i][j] == player_id:
+                    if player_id == 1:
+                        right_distance = ((i - free_right[0]) ** 2 + (j - free_right[1]) ** 2) ** 0.5
+                        left_distance = ((i - free_left[0]) ** 2 + (j - free_left[1]) ** 2) ** 0.5
+                        score = score - right_distance - left_distance
+                    else:
+                        up_distance = ((i - free_up[0]) ** 2 + (j - free_up[1]) ** 2) ** 0.5
+                        down_distance = ((i - free_down[0]) ** 2 + (j - free_down[1]) ** 2) ** 0.5
+                        score = score - (up_distance - down_distance)
+                        # Puentes
+                        # Arriba derecha
+                    if player_id == 1 and board.is_valid((i - 1, j + 2)) and board.board[i][j] == board.board[i - 1][
+                        j + 2]:
                         score += 3
 
-                # Arriba izquierda, player abajo
-                if (board.is_valid((i - 1, j)) and board.board[i][j] == board.board[i - 1][j]
-                        and board.is_valid((i, j + 1)) and board.board[i][j] == board.board[i][j + 1]
-                        and board.is_valid((i - 1, j + 1)) and board.board[i][j] != board.board[i - 1][j + 1]):
-                    score += 3
+                    # Abajo izquierda
+                    if player_id == 2 and board.is_valid((i + 1, j - 2)) and board.board[i][j] == board.board[i + 1][
+                        j - 2]:
+                        score += 3
+                    # Abajo derecha
+                    if board.is_valid((i + 1, j + 1)) and board.board[i][j] == board.board[i + 1][j + 1]:
+                        score += 3
 
-                # Arriba derecha, player arriba
-                if (board.is_valid((i, j + 1)) and board.board[i][j] == board.board[i][j + 1]
-                        and board.is_valid((i + 1, j - 1)) and board.board[i][j] == board.board[i + 1][j - 1]
-                        and board.is_valid((i + 1, j)) and board.board[i][j] != board.board[i + 1][j]):
-                    score += 3
+                    # Verificar cierres de puente
+                    # Arriba derecha, player abajo
+                    if (board.is_valid((i - 1, j + 1)) and board.board[i][j] == board.board[i - 1][j + 1]
+                            and board.is_valid((i, j - 1)) and board.board[i][j] == board.board[i][j - 1]
+                            and board.is_valid((i - 1, j)) and (board.board[i][j] != board.board[i - 1][j] != 0)):
+                        score += 10
 
-                # Arriba izquierda, player arriba
-                if (board.is_valid((i, j-1)) and board.board[i][j] == board.board[i][j-1]
-                        and board.is_valid((i + 1, j)) and board.board[i][j] == board.board[i + 1][j]
-                        and board.is_valid((i + 1, j - 1)) and board.board[i][j] != board.board[i + 1][j - 1]):
-                    score += 3
+                    # Arriba izquierda, player abajo
+                    if (board.is_valid((i - 1, j)) and board.board[i][j] == board.board[i - 1][j]
+                            and board.is_valid((i, j + 1)) and board.board[i][j] == board.board[i][j + 1]
+                            and board.is_valid((i - 1, j + 1)) and (board.board[i][j] != board.board[i - 1][j + 1] != 0)):
+                        score += 10
 
+                    # Arriba derecha, player arriba
+                    if (board.is_valid((i, j + 1)) and board.board[i][j] == board.board[i][j + 1]
+                            and board.is_valid((i + 1, j - 1)) and board.board[i][j] == board.board[i + 1][j - 1]
+                            and board.is_valid((i + 1, j)) and (board.board[i][j] != board.board[i + 1][j]) != 0):
+                        score += 10
 
-    if board.check_connection(player_id):
-        score = 1000
+                    # Arriba izquierda, player arriba
+                    if (board.is_valid((i, j - 1)) and board.board[i][j] == board.board[i][j - 1]
+                            and board.is_valid((i + 1, j)) and board.board[i][j] == board.board[i + 1][j]
+                            and board.is_valid((i + 1, j - 1)) and (board.board[i][j] != board.board[i + 1][j - 1] != 0)):
+                        score += 10
 
-    return score
+                    board.check_merge_count((i, j)) + 1
 
+                    if j <= board.size // 2:
+                        #Bloquear dereha
+                        if board.is_valid((i, j - 2)) and board.board[i][j - 2] != 0 != player_id:
+                            score += 30
+                        if board.is_valid((i + 1, j - 2)) and board.board[i+1][j - 2] != 0 != player_id:
+                            score += 20
+
+                    else:
+                        #Bloquear izquierda
+                        if board.is_valid((i, j + 2)) and board.board[i][j + 2] != 0 != player_id:
+                            score += 30
+                        if board.is_valid((i-1, j + 2)) and board.board[i-1][j + 2] != 0 != player_id:
+                            score += 20
+
+        return score
 
 def bfs_same_player(board, start: Tuple[int, int], player_id: int, on_visit) -> List[Tuple[int, int]]:
     rows, cols = len(board.board), len(board.board[0])
