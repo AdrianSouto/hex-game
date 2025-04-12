@@ -27,7 +27,7 @@ class PlayerAdrIAn(Player):
         possible_moves = board.get_possible_moves()
         posible_moves = board.get_possible_moves()
         if depth == MAX_DEPTH:
-            depth = max(MAX_DEPTH - round((MAX_DEPTH * (len(posible_moves) / board.size ** 2))) + 1, 3)
+            depth = max(MAX_DEPTH - round((MAX_DEPTH * (len(posible_moves) / board.size ** 2))) + 1, 2)
 
         if board.check_connection(self.player_id):
             return 1000 - depth, None
@@ -160,20 +160,35 @@ def evaluate4(board, player_id: int) -> float:
                         score += 10
 
                     board.check_merge_count((i, j)) + 1
+                    if player_id == 2:
+                        if j <= board.size // 2:
+                            #Bloquear dereha
+                            if board.is_valid((i, j - 2)) and board.board[i][j - 2] != 0 != player_id:
+                                score += 30
+                            if board.is_valid((i + 1, j - 2)) and board.board[i+1][j - 2] != 0 != player_id:
+                                score += 20
 
-                    if j <= board.size // 2:
-                        #Bloquear dereha
-                        if board.is_valid((i, j - 2)) and board.board[i][j - 2] != 0 != player_id:
-                            score += 30
-                        if board.is_valid((i + 1, j - 2)) and board.board[i+1][j - 2] != 0 != player_id:
-                            score += 20
+                        else:
+                            #Bloquear izquierda
+                            if board.is_valid((i, j + 2)) and board.board[i][j + 2] != 0 != player_id:
+                                score += 30
+                            if board.is_valid((i-1, j + 2)) and board.board[i-1][j + 2] != 0 != player_id:
+                                score += 20
 
                     else:
-                        #Bloquear izquierda
-                        if board.is_valid((i, j + 2)) and board.board[i][j + 2] != 0 != player_id:
-                            score += 30
-                        if board.is_valid((i-1, j + 2)) and board.board[i-1][j + 2] != 0 != player_id:
-                            score += 20
+                        if i <= board.size // 2:
+                            # Bloquear Abajo
+                            if board.is_valid((i - 2, j)) and board.board[i - 2][j] != 0 != player_id:
+                                score += 30
+                            if board.is_valid((i - 2, j + 1)) and board.board[i - 2][j + 1] != 0 != player_id:
+                                score += 20
+
+                        else:
+                            # Bloquear Arriba
+                            if board.is_valid((i + 2, j)) and board.board[i + 2][j] != 0 != player_id:
+                                score += 30
+                            if board.is_valid((i + 2, j - 1)) and board.board[i + 2][j - 1] != 0 != player_id:
+                                score += 20
 
         return score
 
