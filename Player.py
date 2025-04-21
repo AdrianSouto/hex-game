@@ -1,6 +1,6 @@
 from collections import deque
 from typing import Tuple, Optional, List
-from HexBoard import HexBoard
+from hexboard import HexBoard
 
 
 MAX_DEPTH = 3
